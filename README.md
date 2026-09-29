@@ -1,6 +1,7 @@
 # German Credit — Análise de Risco e Política de Crédito
 
 Análise exploratória e construção de uma política de crédito baseada em regras (scorecard), usando o dataset [Statlog (German Credit Data)](https://archive.ics.uci.edu/dataset/144/statlog), do UCI Machine Learning Repository. Projeto estruturado seguindo a metodologia **CRISP-DM**.
+O objetivo desta análise é entender como um scorecard tradicional (baseado em regras) se diferencia de modelos estatísticos mais robustos, como a regressão logística — tanto em poder discriminante quanto em custo esperado da política de crédito. Devido ao tamanho pequeno da base (1.000 clientes), as métricas avaliadas não mostraram grande diferença entre as duas abordagens; a próxima etapa é repetir essa comparação em uma base maior para ver se essa vantagem se confirma fora de uma amostra pequena.
 
 ## Problema de negócio
 
