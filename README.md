@@ -1,7 +1,9 @@
 # German Credit — Análise de Risco e Política de Crédito
 
+> **Aviso — análise em revisão.** Este projeto recebeu um feedback técnico relevante após a publicação (ver a seção [Feedback recebido](#feedback-recebido)). Em breve será feita uma correção na análise, adicionando o que for necessário para responder aos pontos levantados. Enquanto isso, as conclusões sobre o benchmark devem ser lidas com as ressalvas descritas em [Limitações](#limitações).
+
 Análise exploratória e construção de uma política de crédito baseada em regras (scorecard), usando o dataset [Statlog (German Credit Data)](https://archive.ics.uci.edu/dataset/144/statlog), do UCI Machine Learning Repository. Projeto estruturado seguindo a metodologia **CRISP-DM**.
-O objetivo desta análise é entender como um scorecard tradicional (baseado em regras) se diferencia de modelos estatísticos mais robustos, como a regressão logística — tanto em poder discriminante quanto em custo esperado da política de crédito. Devido ao tamanho pequeno da base (1.000 clientes), as métricas avaliadas não mostraram grande diferença entre as duas abordagens; a próxima etapa é repetir essa comparação em uma base maior para ver se essa vantagem se confirma fora de uma amostra pequena.
+O objetivo desta análise é entender como um scorecard tradicional (baseado em regras) se diferencia de modelos estatísticos mais robustos, como a regressão logística — tanto em poder discriminante quanto em custo esperado da política de crédito. Nesta base, as métricas de discriminação (AUC, Gini e KS) ficaram próximas entre as duas abordagens, mas a comparação tem limites importantes (ver seção Limitações): o teste tem só 300 clientes, o benchmark usou 6 das 20 variáveis e o custo no ponto de corte não foi calculado para a regressão.
 
 ## Problema de negócio
 
@@ -48,7 +50,7 @@ Diferenças abaixo de 1,5 p.p. entre treino e teste em todas as métricas — a 
 
 ## Benchmark: regressão logística
 
-Para verificar se o scorecard de 3 variáveis deixa sinal na mesa, foi treinado um modelo de regressão logística com todas as variáveis candidatas (incluindo `purpose`, `housing` e `years_employment`, que o scorecard não usa):
+Para verificar se o scorecard de 3 variáveis deixa sinal na mesa, foi treinado um modelo de regressão logística com 6 das 20 variáveis da base: as 3 do scorecard mais `purpose`, `housing` e `years_employment`:
 
 | Métrica (teste) | Regressão logística | Scorecard de regras |
 |------------------|----------------------|----------------------|
@@ -56,21 +58,38 @@ Para verificar se o scorecard de 3 variáveis deixa sinal na mesa, foi treinado 
 | Gini             | 0,485                | 0,482                |
 | KS               | 0,408                | 0,371                |
 
-A diferença é pequena (Gini +0,004) — o scorecard de 3 variáveis já captura quase todo o sinal disponível nesta base, e a simplicidade/explicabilidade compensa a complexidade extra do modelo estatístico.
+Adicionar `purpose`, `housing` e `years_employment` não melhorou o AUC nem o Gini nesta amostra (Gini +0,004). Com 300 clientes no teste, essa diferença está dentro da margem de erro, então o resultado indica ausência de ganho detectável, não equivalência entre os modelos. Com desempenho semelhante, o scorecard tem a vantagem de ser simples de explicar e auditar.
 
 ## Limitações
 
-- Scorecard usa apenas 3 variáveis; o benchmark de regressão logística mostra que o espaço de melhoria é pequeno, mas não nulo
+- **Benchmark parcial:** a regressão usou 6 das 20 variáveis. O sinal das demais (idade, valor do crédito, duração, etc.) não foi testado, então não é possível afirmar que o scorecard esgota o sinal da base
+- **Teste pequeno:** 300 clientes (~90 maus pagadores). Diferenças de AUC, Gini e KS estão dentro da margem de erro
+- **Métricas de ranking não mostram custo nem erros:** AUC, Gini e KS medem ordenação. O custo esperado 5:1 no ponto de corte foi calculado só para o scorecard, não para a regressão, então a comparação de custo entre os modelos não foi feita
+- **Um único split treino/teste**, sem validação cruzada nem intervalo de confiança
 - Pesos por faixa definidos por ranking de taxa de default, não por WOE/IV formal ou otimização — próximo passo natural
 - **Nenhuma análise de fairness foi feita.** Variáveis sensíveis (`status_and_sex`, `is_foreign_worker`) não entraram no modelo, mas viés indireto via variáveis correlacionadas (`housing`, `job`, `purpose`) não foi descartado
 - Dataset sintético/histórico (1994), sem dimensão temporal — não é possível avaliar estabilidade da política ao longo do tempo
 - Amostra pequena (1.000 clientes): categorias como "retraining" (9 clientes) e scores extremos (0 e 9, <16 clientes cada) têm taxas pouco confiáveis isoladamente
 
-## Próximos passos
+## Possíveis extensões
 
-- Repetir a comparação scorecard vs. modelo estatístico em uma base maior (ex: [Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit), ~150 mil registros) para ver se a vantagem do modelo cresce fora de uma amostra pequena
+- Comparar o custo esperado 5:1 da regressão em seu corte ótimo com o do scorecard
+- Adicionar uma regressão só com as 3 variáveis do scorecard, para separar o efeito do método do efeito das variáveis extras, e outra com as 20 variáveis
+- Validação cruzada repetida e/ou bootstrap para obter intervalos de confiança das diferenças de AUC, Gini e KS
 - Análise de fairness (taxa de aprovação e de erro por subgrupo sensível) antes de qualquer uso em produção
 - Calibrar pesos do scorecard via WOE/IV
+
+## Feedback recebido
+
+Após a publicação do projeto no LinkedIn, um comentário de uma cientista de dados apontou limites na conclusão do benchmark. Os pontos levantados foram:
+
+1. **A conclusão de que as 3 variáveis "capturam quase todo o sinal disponível" era forte demais.** AUC de 0,741 contra 0,743 não é suficiente para concluir que não há informação relevante nas demais variáveis.
+2. **AUC, Gini e KS avaliam essencialmente a capacidade de ordenação (discriminação).** Em problemas de inadimplência, podem continuar razoáveis mesmo quando o modelo ainda erra uma quantidade relevante de casos, e não mostram onde estão os erros, como eles se distribuem no ponto de corte ou quanto custam.
+3. **A análise de custo e de inadimplência no ponto de corte traz informação que essas métricas não capturam**, e ela foi feita só para o scorecard, não para a regressão.
+
+Na revisão do feedback, foram confirmados também outros limites da análise: a regressão usou 6 das 20 variáveis, o teste tem apenas 300 clientes e foi usado um único split treino/teste, sem validação cruzada.
+
+**Status:** a conclusão foi reescrita neste README como ausência de ganho detectável, não como equivalência entre os modelos. A correção da análise (ver [Possíveis extensões](#possíveis-extensões)) será feita em breve, e este documento será atualizado com os resultados.
 
 ## Tecnologias
 
