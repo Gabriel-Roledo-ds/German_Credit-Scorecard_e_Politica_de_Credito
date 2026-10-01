@@ -1,6 +1,7 @@
 # German Credit — Análise de Risco e Política de Crédito
 
 > **Aviso — análise em revisão.** Este projeto recebeu um feedback técnico relevante após a publicação (ver a seção [Feedback recebido](#feedback-recebido)). Em breve será feita uma correção na análise, adicionando o que for necessário para responder aos pontos levantados. Enquanto isso, as conclusões sobre o benchmark devem ser lidas com as ressalvas descritas em [Limitações](#limitações).
+>
 > **Atualização Análise exploratória realizada dia 01/10**
 
 Análise exploratória e construção de uma política de crédito baseada em regras (scorecard), usando o dataset [Statlog (German Credit Data)](https://archive.ics.uci.edu/dataset/144/statlog), do UCI Machine Learning Repository. Projeto estruturado seguindo a metodologia **CRISP-DM**.
